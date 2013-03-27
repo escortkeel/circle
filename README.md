@@ -9,8 +9,8 @@ The source code is hosted on <a href="https://github.com/escortkeel/cIRCle">GitH
 Coming soon.
 
 ## Example
-The following code connects to the "irc.freenode.net" IRC servers with the nick "cIRCle" and prints out the MOTD, before terminating.
-```
+The following code connects to the "irc.freenode.net" IRC network with the nick "cIRCle" and prints out the MOTD, before terminating.
+```java
 import java.io.IOException;
 import me.escortkeel.circle.IRCConnection;
 import me.escortkeel.circle.event.IRCClient;
