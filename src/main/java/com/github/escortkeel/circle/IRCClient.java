@@ -43,10 +43,6 @@ import com.github.escortkeel.circle.event.IRCMotdEvent;
  * This class implements an IRC client connection to an IRC server.
  *
  * @author Keeley Hoek (escortkeel@live.com)
- * @see java.net.Socket#setSocketImplFactory(java.net.SocketImplFactory)
- * @see java.net.SocketImpl
- * @see java.nio.channels.SocketChannel
- * @since JDK1.0
  */
 public class IRCClient implements Closeable {
 
