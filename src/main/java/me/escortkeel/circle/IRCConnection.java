@@ -100,8 +100,14 @@ public class IRCConnection implements Closeable {
         return socket.isClosed();
     }
 
+    public void close(String reason) throws IOException {
+        out.println("QUIT :" + reason);        
+        socket.close();
+    }
+
     @Override
     public void close() throws IOException {
+        out.println("QUIT");        
         socket.close();
     }
 
