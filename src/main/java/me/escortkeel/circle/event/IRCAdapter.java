@@ -29,7 +29,7 @@ package me.escortkeel.circle.event;
  *
  * @author Keeley Hoek (escortkeel@live.com)
  */
-public class IRCClient {
+public class IRCAdapter {
 
     public void onMotd(IRCMotdEvent event) {
     }

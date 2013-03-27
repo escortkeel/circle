@@ -35,15 +35,20 @@ import java.net.Socket;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Objects;
+import me.escortkeel.circle.event.IRCAdapter;
 import me.escortkeel.circle.event.IRCRawMessageEvent;
-import me.escortkeel.circle.event.IRCClient;
 import me.escortkeel.circle.event.IRCMotdEvent;
 
 /**
+ * This class implements an IRC client connection to an IRC server.
  *
  * @author Keeley Hoek (escortkeel@live.com)
+ * @see java.net.Socket#setSocketImplFactory(java.net.SocketImplFactory)
+ * @see java.net.SocketImpl
+ * @see java.nio.channels.SocketChannel
+ * @since JDK1.0
  */
-public class IRCConnection implements Closeable {
+public class IRCClient implements Closeable {
 
     private final Socket socket;
     private final BufferedReader in;
@@ -54,18 +59,77 @@ public class IRCConnection implements Closeable {
     private final String realname;
     private final boolean invisible;
     private final StringBuilder motd = new StringBuilder();
-    private final ArrayList<IRCClient> clients = new ArrayList<>();
+    private final ArrayList<IRCAdapter> adapters = new ArrayList<>();
 
-    public IRCConnection(String address, String nick) throws IOException, IRCNameReservedException {
-        this(address, 6667, nick);
+    /**
+     * Creates a new
+     * <code>IRCClient</code> and connects it to port 6667 (the default IRC
+     * port) on the named host, using the specified nickname.
+     * <p>
+     * If the specified host is <tt>null</tt> it is the equivalent of specifying
+     * the address as
+     * <tt>{@link java.net.InetAddress#getByName InetAddress.getByName}(null)</tt>.
+     * In other words, it is equivalent to specifying an address of the loopback
+     * interface.
+     *
+     * @param address the host name, or <code>null</code> for the loopback
+     * address.
+     * @param nickname the nickname.
+     *
+     * @exception IOException if an I/O error occurs when creating the
+     * connection.
+     */
+    public IRCClient(String address, String nickname) throws IOException, IRCNameReservedException {
+        this(address, 6667, nickname);
     }
 
-    public IRCConnection(String address, int port, String nick) throws IOException {
-        this(address, 6667, nick, nick, nick, false);
+    /**
+     * Creates a new
+     * <code>IRCClient</code> and connects it to the specified port number on
+     * the named host, using the specified nickname.
+     * <p>
+     * If the specified host is <tt>null</tt> it is the equivalent of specifying
+     * the address as
+     * <tt>{@link java.net.InetAddress#getByName InetAddress.getByName}(null)</tt>.
+     * In other words, it is equivalent to specifying an address of the loopback
+     * interface.
+     *
+     * @param address the host name, or <code>null</code> for the loopback
+     * address.
+     * @param port the port number.
+     * @param nickname the nickname.
+     *
+     * @exception IOException if an I/O error occurs when creating the
+     * connection.
+     */
+    public IRCClient(String address, int port, String nickname) throws IOException {
+        this(address, 6667, nickname, nickname, nickname, false);
     }
 
-    public IRCConnection(String address, int port, String nickname, String username, String realname, boolean invisible) throws IOException {
-        Objects.requireNonNull(address);
+    /**
+     * Creates a new
+     * <code>IRCClient</code> and connects it to the specified port number on
+     * the named host, using the specified nickname, username, real name, and
+     * invisibility flag.
+     * <p>
+     * If the specified host is <tt>null</tt> it is the equivalent of specifying
+     * the address as
+     * <tt>{@link java.net.InetAddress#getByName InetAddress.getByName}(null)</tt>.
+     * In other words, it is equivalent to specifying an address of the loopback
+     * interface.
+     *
+     * @param address the host name, or <code>null</code> for the loopback
+     * address.
+     * @param port the port number.
+     * @param nickname the nickname.
+     * @param username the username.
+     * @param realname the real name.
+     * @param invisible whether the client should be invisible to other clients.
+     *
+     * @exception IOException if an I/O error occurs when creating the
+     * connection.
+     */
+    public IRCClient(String address, int port, String nickname, String username, String realname, boolean invisible) throws IOException {
         Objects.requireNonNull(nickname);
         Objects.requireNonNull(username);
         Objects.requireNonNull(realname);
@@ -92,22 +156,59 @@ public class IRCConnection implements Closeable {
         handshake();
     }
 
-    public void addClient(IRCClient client) {
-        clients.add(client);
+    /**
+     * Attaches a new
+     * <code>IRCAdapter</code> instance to this
+     * <code>IRCClient</code>.
+     */
+    public void addClient(IRCAdapter client) {
+        adapters.add(client);
     }
 
+    /**
+     * Returns the closed state of the socket.
+     *
+     * @return true if the socket has been closed
+     * @see #close
+     */
     public boolean isClosed() {
         return socket.isClosed();
     }
 
+    /**
+     * Closes this
+     * <code>IRCClient</code> gracefully with the specified reason. This method
+     * is synonymous with the
+     * <code>close</code> method.
+     *
+     * @param reason the reason for closing the connection
+     * @throws IOException if an I/O error occurs
+     */
+    public void quit(String reason) throws IOException {
+        close(reason);
+    }
+
+    /**
+     * Closes this IRCClient gracefully with the specified reason. If the
+     * connection is already closed then invoking this method has no effect.
+     *
+     * @param reason the reason for closing the connection
+     * @throws IOException if an I/O error occurs
+     */
     public void close(String reason) throws IOException {
-        out.println("QUIT :" + reason);        
+        out.println("QUIT :" + reason);
         socket.close();
     }
 
+    /**
+     * Closes this IRCClient gracefully. If the connection is already closed
+     * then invoking this method has no effect.
+     *
+     * @throws IOException if an I/O error occurs
+     */
     @Override
     public void close() throws IOException {
-        out.println("QUIT");        
+        out.println("QUIT");
         socket.close();
     }
 
@@ -132,7 +233,7 @@ public class IRCConnection implements Closeable {
                 }
             }
         };
-        
+
         worker.setDaemon(true);
         worker.start();
     }
@@ -206,13 +307,13 @@ public class IRCConnection implements Closeable {
     }
 
     private void fireMotdEvent(IRCMotdEvent e) {
-        for (IRCClient l : clients) {
+        for (IRCAdapter l : adapters) {
             l.onMotd(e);
         }
     }
 
     private void fireRawMessageEvent(IRCRawMessageEvent e) {
-        for (IRCClient l : clients) {
+        for (IRCAdapter l : adapters) {
             l.onRawMessage(e);
         }
     }
