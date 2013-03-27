@@ -23,21 +23,27 @@
  * TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package me.escortkeel.circle.event;
+package com.github.escortkeel.circle.event;
 
 /**
  *
  * @author Keeley Hoek (escortkeel@live.com)
  */
-public class IRCMotdEvent {
+public class IRCRawMessageEvent extends IRCEvent {
 
-    private final String motd;
+    private final String sender;
+    private final String message;
 
-    public IRCMotdEvent(String motd) {
-        this.motd = motd;
+    public IRCRawMessageEvent(String sender, String message) {
+        this.sender = sender;
+        this.message = message;
     }
 
-    public String getMotd() {
-        return motd;
+    public String getSender() {
+        return sender;
+    }
+
+    public String getMessage() {
+        return message;
     }
 }

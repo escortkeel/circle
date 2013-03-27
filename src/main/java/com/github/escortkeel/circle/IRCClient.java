@@ -23,9 +23,9 @@
  * TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package me.escortkeel.circle;
+package com.github.escortkeel.circle;
 
-import me.escortkeel.circle.exception.IRCNameReservedException;
+import com.github.escortkeel.circle.exception.IRCNameReservedException;
 import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.IOException;
@@ -35,9 +35,9 @@ import java.net.Socket;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Objects;
-import me.escortkeel.circle.event.IRCAdapter;
-import me.escortkeel.circle.event.IRCRawMessageEvent;
-import me.escortkeel.circle.event.IRCMotdEvent;
+import com.github.escortkeel.circle.event.IRCAdapter;
+import com.github.escortkeel.circle.event.IRCRawMessageEvent;
+import com.github.escortkeel.circle.event.IRCMotdEvent;
 
 /**
  * This class implements an IRC client connection to an IRC server.

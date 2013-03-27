@@ -23,11 +23,35 @@
  * TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package me.escortkeel.circle.event;
+package com.github.escortkeel.circle;
 
 /**
  *
  * @author Keeley Hoek (escortkeel@live.com)
  */
-public abstract class IRCEvent {
+public enum IRCReply {
+
+    NULL(0),
+    MOTDSTART(375),
+    MOTD(372),
+    ENDOFMOTD(376);
+
+    public static IRCReply toEnum(int code) {
+        for (IRCReply r : IRCReply.values()) {
+            if (r.getCode() == code) {
+                return r;
+            }
+        }
+
+        return NULL;
+    }
+    private final int code;
+
+    private IRCReply(int code) {
+        this.code = code;
+    }
+
+    public int getCode() {
+        return code;
+    }
 }
