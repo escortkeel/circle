@@ -12,9 +12,9 @@ Coming soon.
 The following code connects to the "irc.freenode.net" IRC network with the nick "cIRCle" and prints out the MOTD, before terminating.
 ```java
 import java.io.IOException;
-import me.escortkeel.circle.IRCClient;
-import me.escortkeel.circle.event.IRCAdapter;
-import me.escortkeel.circle.event.IRCMotdEvent;
+import com.github.escortkeel.circle.IRCClient;
+import com.github.escortkeel.circle.event.IRCAdapter;
+import com.github.escortkeel.circle.event.IRCMotdEvent;
 
 public class Main {
     public static void main(String[] args) throws IOException {        
