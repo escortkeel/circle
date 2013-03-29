@@ -72,7 +72,8 @@ public class IRCClient implements Closeable {
      * @param address the host name, or <code>null</code> for the loopback
      * address.
      * @param nickname the nickname.
-     * @param adapter the adapter to be associated with * * * * * *      * this <code>IRCClient</code>.
+     * @param adapter the adapter to be associated with * * * * * * *
+     * this <code>IRCClient</code>.
      *
      * @exception IRCNameException if the specified nickname is already in use.
      * @exception IOException if an I/O error occurs when creating the
@@ -433,8 +434,11 @@ public class IRCClient implements Closeable {
                     break;
                 }
                 case "KICK": {
-                    channels.remove(args);
-                    fireEvent(new IRCChannelPartEvent(this, args, true));
+                    int space = args.indexOf(' ');
+                    if (args.substring(space + 1).equals(getNickname())) {
+                        channels.remove(args);
+                        fireEvent(new IRCChannelPartEvent(this, args.substring(0, space), true));
+                    }
                     break;
                 }
                 case "PRIVMSG": {
