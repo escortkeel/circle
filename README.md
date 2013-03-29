@@ -1,7 +1,7 @@
 # cIRCle
 cIRCle (pronnounced "circle") is an IRC client library created and developed by Keeley Hoek. It fundamentally aims to be lightweight and easy to use.
 
-The project was started on March 27 2013, when Keeley was fourteen.
+The project was started on March 27 2013.
 
 The source code is hosted on <a href="https://github.com/escortkeel/cIRCle">GitHub</a> and is released under the terms of the <a href="https://raw.github.com/escortkeel/cIRCle/master/LICENSE">Simplified BSD License</a>.
 
