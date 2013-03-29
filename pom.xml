@@ -9,7 +9,7 @@
 
     <name>cIRCle</name>
     <description>An easy to use, lightweight Java IRC client library.</description>
-    <url>https://github.com/escortkeel/cIRCle</url>
+    <url>http://escortkeel.github.com/cIRCle</url>
 	
     <licenses>
         <license>
