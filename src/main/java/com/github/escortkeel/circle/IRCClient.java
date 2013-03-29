@@ -27,6 +27,7 @@ package com.github.escortkeel.circle;
 
 import com.github.escortkeel.circle.event.IRCChannelJoinEvent;
 import com.github.escortkeel.circle.event.IRCChannelPartEvent;
+import com.github.escortkeel.circle.event.IRCConnectEvent;
 import com.github.escortkeel.circle.event.IRCEvent;
 import com.github.escortkeel.circle.event.IRCMotdEvent;
 import com.github.escortkeel.circle.event.IRCPrivateMessageEvent;
@@ -71,7 +72,7 @@ public class IRCClient implements Closeable {
      * @param address the host name, or <code>null</code> for the loopback
      * address.
      * @param nickname the nickname.
-     * @param adapter the adapter to be associated with * * * * *      * this <code>IRCClient</code>.
+     * @param adapter the adapter to be associated with * * * * * *      * this <code>IRCClient</code>.
      *
      * @exception IRCNameException if the specified nickname is already in use.
      * @exception IOException if an I/O error occurs when creating the
@@ -140,6 +141,7 @@ public class IRCClient implements Closeable {
     public static IRCClient create(String address, int port, String nickname, String username, String realname, boolean invisible, IRCAdapter adapter) throws IRCNameException, IOException {
         IRCClient c = new IRCClient(address, port, nickname, username, realname, invisible, adapter);
         c.worker.start();
+        c.fireEvent(new IRCConnectEvent(c));
         return c;
     }
     private final Socket socket;
@@ -244,6 +246,48 @@ public class IRCClient implements Closeable {
     }
 
     /**
+     * Closes this
+     * <code>IRCClient</code> gracefully. If the connection is already closed
+     * then invoking this method has no effect.
+     */
+    public void quit() {
+        send("QUIT");
+        status = Status.QUIT;
+    }
+
+    /**
+     * Closes this
+     * <code>IRCClient</code> gracefully with the specified reason. If the
+     * connection is already closed then invoking this method has no effect.
+     *
+     * @param reason the reason for closing the connection
+     */
+    public void quit(String reason) {
+        send("QUIT :" + reason);
+        status = Status.QUIT;
+    }
+
+    /**
+     * Returns the address of the remote host which this
+     * <code>IRCClient</code> instance is connected to.
+     *
+     * @return the address of the remote host.
+     */
+    public String getRemoteAddress() {
+        return socket.getInetAddress().getHostName();
+    }
+
+    /**
+     * Returns the port on the remote host which this
+     * <code>IRCClient</code> instance is connected to.
+     *
+     * @return the port on the remote host.
+     */
+    public int getRemotePort() {
+        return socket.getPort();
+    }
+
+    /**
      * Returns the nickname associated with this
      * <code>IRCClient</code> instance.
      *
@@ -277,16 +321,6 @@ public class IRCClient implements Closeable {
     }
 
     /**
-     * Returns whether this
-     * <code>IRCClient</code> instance is invisible.
-     *
-     * @return whether this <code>IRCClient</code> instance is invisible.
-     */
-    public boolean isInvisible() {
-        return invisible;
-    }
-
-    /**
      * Returns the channels which this
      * <code>IRCClient</code> is a member of.
      *
@@ -300,35 +334,13 @@ public class IRCClient implements Closeable {
     }
 
     /**
-     * Waits until this
-     * <code>IRCClient</code> is closed.
+     * Returns whether this
+     * <code>IRCClient</code> instance is invisible.
      *
-     * @throws InterruptedException if the waiting thread is interrupted.
+     * @return whether this <code>IRCClient</code> instance is invisible.
      */
-    public void waitFor() throws InterruptedException {
-        running.acquire();
-    }
-
-    /**
-     * Closes this
-     * <code>IRCClient</code> gracefully. If the connection is already closed
-     * then invoking this method has no effect.
-     */
-    public void quit() {
-        send("QUIT");
-        status = Status.QUIT;
-    }
-
-    /**
-     * Closes this
-     * <code>IRCClient</code> gracefully with the specified reason. If the
-     * connection is already closed then invoking this method has no effect.
-     *
-     * @param reason the reason for closing the connection
-     */
-    public void quit(String reason) {
-        send("QUIT :" + reason);
-        status = Status.QUIT;
+    public boolean isInvisible() {
+        return invisible;
     }
 
     /**
@@ -339,6 +351,16 @@ public class IRCClient implements Closeable {
      */
     public boolean isClosed() {
         return socket.isClosed();
+    }
+
+    /**
+     * Waits until this
+     * <code>IRCClient</code> is closed.
+     *
+     * @throws InterruptedException if the waiting thread is interrupted.
+     */
+    public void waitFor() throws InterruptedException {
+        running.acquire();
     }
 
     /**
@@ -421,9 +443,9 @@ public class IRCClient implements Closeable {
                     break;
                 }
                 case "ERROR": {
-                    if(status == Status.QUIT) {
+                    if (status == Status.QUIT) {
                         close();
-                    } else if(status == Status.WAITING) {                        
+                    } else if (status == Status.WAITING) {
                         status = Status.ERROR;
                     }
                     break;

@@ -27,6 +27,7 @@ package com.github.escortkeel.circle;
 
 import com.github.escortkeel.circle.event.IRCChannelJoinEvent;
 import com.github.escortkeel.circle.event.IRCChannelPartEvent;
+import com.github.escortkeel.circle.event.IRCConnectEvent;
 import com.github.escortkeel.circle.event.IRCMotdEvent;
 import com.github.escortkeel.circle.event.IRCPrivateMessageEvent;
 import com.github.escortkeel.circle.event.IRCRawMessageEvent;
@@ -38,6 +39,15 @@ import com.github.escortkeel.circle.event.IRCRawMessageEvent;
  * @author Keeley Hoek (escortkeel@live.com)
  */
 public class IRCAdapter {
+
+    /**
+     * This method is invoked by an
+     * <code>IRCClient</code> instance when a connection is established.
+     *
+     * @param event the <code>IRCConnectEvent</code>
+     */
+    public void onConnect(IRCConnectEvent event) {
+    }
 
     /**
      * This method is invoked by an
