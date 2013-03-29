@@ -91,6 +91,6 @@ public class IRCAdapter {
      *
      * @param event the <code>IRCPrivateMessageEvent</code>
      */
-    public void onPrivateMessage(IRCPrivateMessageEvent e) {
+    public void onPrivateMessage(IRCPrivateMessageEvent event) {
     }
 }
