@@ -23,17 +23,27 @@
  * TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.github.escortkeel.circle.event;
+package com.github.escortkeel.circle.exception;
 
 /**
  *
  * @author Keeley Hoek (escortkeel@live.com)
  */
-public class IRCAdapter {
+public class IRCNameException extends IRCException {
 
-    public void onMotd(IRCMotdEvent event) {
+    public IRCNameException() {
+        super();
     }
 
-    public void onRawMessage(IRCRawMessageEvent event) {
+    public IRCNameException(String message) {
+        super(message);
+    }
+
+    public IRCNameException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public IRCNameException(Throwable cause) {
+        super(cause);
     }
 }

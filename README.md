@@ -9,29 +9,26 @@ The source code is hosted on <a href="https://github.com/escortkeel/cIRCle">GitH
 Coming soon.
 
 ## Example
-The following code connects to the "irc.freenode.net" IRC network with the nick "cIRCle" and prints out the MOTD, before terminating.
+The following code connects to the "irc.freenode.net" IRC network with the nick "cIRCleMan" and joins channel #botwar. Upon completion, it will send the message "Hi!" to #botwar, before quitting with the message "Bye!".
 ```java
+import com.github.escortkeel.circle.IRCClient;
+import com.github.escortkeel.circle.IRCAdapter;
+import com.github.escortkeel.circle.event.IRCChannelJoinEvent;
+import com.github.escortkeel.circle.exception.IRCNameException;
 import java.io.IOException;
-import me.escortkeel.circle.IRCClient;
-import me.escortkeel.circle.event.IRCAdapter;
-import me.escortkeel.circle.event.IRCMotdEvent;
 
 public class Main {
-    public static void main(String[] args) throws IOException {        
-        final IRCClient c = new IRCClient("irc.freenode.net", "cIRCle");
-        c.addClient(new IRCAdapter() {
-            @Override
-            public void onMotd(IRCMotdEvent event) {
-                System.out.println(event.getMotd());
 
-                try {
-                    c.close();
-                } catch (IOException ex) {
-                }
+    public static void main(String[] args) throws IRCNameException, IOException, InterruptedException {
+        IRCClient c = IRCClient.create("irc.freenode.net", "cIRCleMan", new IRCAdapter() {
+            @Override
+            public void onChannelJoin(IRCChannelJoinEvent e) {
+                e.getClient().privmsg(e.getChannel(), "Hi!");
+                e.getClient().quit("Bye!");
             }
         });
-        
-        while(!c.isClosed());
+        c.join("#botwar");
+        c.waitFor();
     }
 }
 ```

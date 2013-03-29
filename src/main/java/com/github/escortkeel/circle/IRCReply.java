@@ -29,12 +29,14 @@ package com.github.escortkeel.circle;
  *
  * @author Keeley Hoek (escortkeel@live.com)
  */
-public enum IRCReply {
+enum IRCReply {
 
     NULL(0),
+    WELCOME(1),
     MOTDSTART(375),
     MOTD(372),
-    ENDOFMOTD(376);
+    ENDOFMOTD(376),
+    NICKNAMEINUSE(433);
 
     public static IRCReply toEnum(int code) {
         for (IRCReply r : IRCReply.values()) {
