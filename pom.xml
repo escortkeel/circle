@@ -8,7 +8,7 @@
     <packaging>jar</packaging>
 
     <name>cIRCle</name>
-    <description>An easy to use, lightweight Java IRC client library.</description>
+    <description>An easy to use, lightweight asynchronous Java IRC client library.</description>
     <url>http://escortkeel.github.com/cIRCle</url>
 	
     <licenses>

@@ -1,5 +1,5 @@
 # cIRCle
-cIRCle (pronnounced "circle") is an IRC client library created and developed by Keeley Hoek. It fundamentally aims to be lightweight and easy to use.
+cIRCle (pronnounced "circle") is an asynchronous IRC client library created and developed by Keeley Hoek. It fundamentally aims to be lightweight and easy to use.
 
 The project was started on March 27 2013.
 
