@@ -10,7 +10,7 @@
     <name>cIRCle</name>
     <description>An easy to use, lightweight asynchronous Java IRC client library.</description>
     <url>http://escortkeel.github.com/cIRCle</url>
-	
+    
     <licenses>
         <license>
             <name>Simplified BSD Liscence</name>
