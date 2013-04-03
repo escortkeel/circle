@@ -41,24 +41,23 @@
 
 <h2>Example</h2>
 
-<p>The following code connects to the "irc.freenode.net" IRC network with the nick "cIRCleMan" and joins channel #botwar. Upon completion, it will send the message "Hi!" to #botwar, before quitting with the message "Bye!".</p>
+<p>The following code connects to the "irc.freenode.net" IRC network with the nickname "cIRCler" and joins channel #botwar. It will send the message "Hi!" all members of #botwar, before quitting with the message "Bye!".</p>
 
 <div class="highlight"><pre><span class="kn">import</span> <span class="nn">com.github.escortkeel.circle.IRCClient</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">com.github.escortkeel.circle.IRCAdapter</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">com.github.escortkeel.circle.event.IRCChannelJoinEvent</span><span class="o">;</span>
-<span class="kn">import</span> <span class="nn">com.github.escortkeel.circle.exception.IRCNameException</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">java.io.IOException</span><span class="o">;</span>
 
 <span class="kd">public</span> <span class="kd">class</span> <span class="nc">Main</span> <span class="o">{</span>
-
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">IRCNameException</span><span class="o">,</span> <span class="n">IOException</span><span class="o">,</span> <span class="n">InterruptedException</span> <span class="o">{</span>
-        <span class="n">IRCClient</span> <span class="n">c</span> <span class="o">=</span> <span class="n">IRCClient</span><span class="o">.</span><span class="na">create</span><span class="o">(</span><span class="s">"irc.freenode.net"</span><span class="o">,</span> <span class="s">"cIRCleMan"</span><span class="o">,</span> <span class="k">new</span> <span class="n">IRCAdapter</span><span class="o">()</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">IOException</span><span class="o">,</span> <span class="n">InterruptedException</span> <span class="o">{</span>
+        <span class="n">IRCClient</span> <span class="n">c</span> <span class="o">=</span> <span class="k">new</span> <span class="n">IRCClient</span><span class="o">(</span><span class="s">"cIRCler"</span><span class="o">,</span> <span class="k">new</span> <span class="n">IRCAdapter</span><span class="o">()</span> <span class="o">{</span>
             <span class="nd">@Override</span>
             <span class="kd">public</span> <span class="kt">void</span> <span class="nf">onChannelJoin</span><span class="o">(</span><span class="n">IRCChannelJoinEvent</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
                 <span class="n">e</span><span class="o">.</span><span class="na">getClient</span><span class="o">().</span><span class="na">privmsg</span><span class="o">(</span><span class="n">e</span><span class="o">.</span><span class="na">getChannel</span><span class="o">(),</span> <span class="s">"Hi!"</span><span class="o">);</span>
                 <span class="n">e</span><span class="o">.</span><span class="na">getClient</span><span class="o">().</span><span class="na">quit</span><span class="o">(</span><span class="s">"Bye!"</span><span class="o">);</span>
             <span class="o">}</span>
         <span class="o">});</span>
+        <span class="n">c</span><span class="o">.</span><span class="na">connect</span><span class="o">(</span><span class="s">"irc.freenode.net"</span><span class="o">);</span>
         <span class="n">c</span><span class="o">.</span><span class="na">join</span><span class="o">(</span><span class="s">"#botwar"</span><span class="o">);</span>
         <span class="n">c</span><span class="o">.</span><span class="na">waitFor</span><span class="o">();</span>
     <span class="o">}</span>
