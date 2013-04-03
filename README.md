@@ -1,5 +1,5 @@
 # cIRCle
-cIRCle (pronnounced "circle") is an asynchronous IRC client library created and developed by Keeley Hoek. It fundamentally aims to be lightweight and easy to use.
+cIRCle (pronnounced "circle") is a fully asynchronous IRC client library created and developed by Keeley Hoek. It fundamentally aims to be lightweight and easy to use.
 
 The project was started on March 27 2013.
 
@@ -9,7 +9,7 @@ The source code is hosted on <a href="https://github.com/escortkeel/cIRCle">GitH
 Coming soon.
 
 ## Example
-The following code connects to the "irc.freenode.net" IRC network with the nick "cIRCler" and joins channel #botwar. It will send the message "Hi!" all members of #botwar, before quitting with the message "Bye!".
+The following code connects to the "irc.freenode.net" IRC network with the nickname "cIRCler" and joins channel #botwar. It will send the message "Hi!" all members of #botwar, before quitting with the message "Bye!".
 ```java
 import com.github.escortkeel.circle.IRCClient;
 import com.github.escortkeel.circle.IRCAdapter;
