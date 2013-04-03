@@ -92,7 +92,6 @@ public class IRCClient implements Closeable {
      * @param adapter the adapter to be associated with this
      * <code>IRCClient</code>.
      *
-     * @exception IRCNameException if the specified nickname is already in use.
      * @exception IOException if an I/O error occurs when creating the
      * connection.
      */
