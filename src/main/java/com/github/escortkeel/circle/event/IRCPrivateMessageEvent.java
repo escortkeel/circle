@@ -36,15 +36,18 @@ import com.github.escortkeel.circle.IRCClient;
 public class IRCPrivateMessageEvent extends IRCMessageEvent {
 
     private final String target;
+    private final String message;
 
     /**
      * Constructs a new
-     * <code>IRCPravteMessageEvent</code> with the specified parameters.
+     * <code>IRCPrivateMessageEvent</code> with the specified parameters.
      */
-    public IRCPrivateMessageEvent(IRCClient client, String source, String message, String target) {
+    public IRCPrivateMessageEvent(IRCClient client, String source, String message) {
         super(client, source, message);
 
-        this.target = target;
+        int split = message.indexOf(" ");
+        this.target = message.substring(0, split);
+        this.message = message.substring(split + 1);
     }
 
     /**
@@ -54,5 +57,14 @@ public class IRCPrivateMessageEvent extends IRCMessageEvent {
      */
     public String getTarget() {
         return target;
+    }
+
+    /**
+     * Returns the contents of message.
+     *
+     * @return the message.
+     */
+    public String getMessage() {
+        return message;
     }
 }

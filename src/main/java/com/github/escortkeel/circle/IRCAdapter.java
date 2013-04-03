@@ -25,12 +25,18 @@
  */
 package com.github.escortkeel.circle;
 
+import com.github.escortkeel.circle.event.IRCNicknameInvalidEvent;
 import com.github.escortkeel.circle.event.IRCChannelJoinEvent;
 import com.github.escortkeel.circle.event.IRCChannelPartEvent;
-import com.github.escortkeel.circle.event.IRCConnectEvent;
+import com.github.escortkeel.circle.event.IRCConnectionClosedEvent;
+import com.github.escortkeel.circle.event.IRCConnectionEstablishedEvent;
+import com.github.escortkeel.circle.event.IRCErrorEvent;
 import com.github.escortkeel.circle.event.IRCMotdEvent;
+import com.github.escortkeel.circle.event.IRCNicknameChangeEvent;
+import com.github.escortkeel.circle.event.IRCNicknameInUseEvent;
 import com.github.escortkeel.circle.event.IRCPrivateMessageEvent;
 import com.github.escortkeel.circle.event.IRCRawMessageEvent;
+import com.github.escortkeel.circle.event.IRCWelcomeEvent;
 
 /**
  * This class represents the logic of an IRC client or "bot". Override methods
@@ -44,9 +50,27 @@ public class IRCAdapter {
      * This method is invoked by an
      * <code>IRCClient</code> instance when a connection is established.
      *
-     * @param event the <code>IRCConnectEvent</code>
+     * @param event the <code>IRCConnectionEstablishedEvent</code>
      */
-    public void onConnect(IRCConnectEvent event) {
+    public void onConnectionEstablished(IRCConnectionEstablishedEvent event) {
+    }
+
+    /**
+     * This method is invoked by an
+     * <code>IRCClient</code> instance when a connection is closed.
+     *
+     * @param event the <code>IRCConnectionClosedEvent</code>
+     */
+    public void onConnectionClosed(IRCConnectionClosedEvent event) {
+    }
+
+    /**
+     * This method is invoked by an
+     * <code>IRCClient</code> instance when a welcome message is received.
+     *
+     * @param event the <code>IRCWelcomeEvent</code>
+     */
+    public void onWelcome(IRCWelcomeEvent event) {
     }
 
     /**
@@ -56,6 +80,15 @@ public class IRCAdapter {
      * @param event the <code>IRCMotdEvent</code>
      */
     public void onMotd(IRCMotdEvent event) {
+    }
+
+    /**
+     * This method is invoked by an
+     * <code>IRCClient</code> instance when an error message is received.
+     *
+     * @param event the <code>IRCErrorEvent</code>
+     */
+    public void onError(IRCErrorEvent event) {
     }
 
     /**
@@ -74,6 +107,35 @@ public class IRCAdapter {
      * @param event the <code>IRCChannelPartEvent</code>
      */
     public void onChannelPart(IRCChannelPartEvent event) {
+    }
+
+    /**
+     * This method is invoked by an
+     * <code>IRCClient</code> instance when its nickname is changed.
+     *
+     * @param event the <code>IRCErrorEvent</code>
+     */
+    public void onNicknameChange(IRCNicknameChangeEvent event) {
+    }
+
+    /**
+     * This method is invoked by an
+     * <code>IRCClient</code> instance when it attempted to change its nickname
+     * to a name already in use.
+     *
+     * @param event the <code>IRCErrorEvent</code>
+     */
+    public void onNicknameInUse(IRCNicknameInUseEvent event) {
+    }
+
+    /**
+     * This method is invoked by an
+     * <code>IRCClient</code> instance when it attempted to change its nickname
+     * to a specification nonconformant name.
+     *
+     * @param event the <code>IRCErrorEvent</code>
+     */
+    public void onNicknameInvalid(IRCNicknameInvalidEvent event) {
     }
 
     /**

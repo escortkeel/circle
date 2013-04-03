@@ -9,24 +9,23 @@ The source code is hosted on <a href="https://github.com/escortkeel/cIRCle">GitH
 Coming soon.
 
 ## Example
-The following code connects to the "irc.freenode.net" IRC network with the nick "cIRCleMan" and joins channel #botwar. Upon completion, it will send the message "Hi!" to #botwar, before quitting with the message "Bye!".
+The following code connects to the "irc.freenode.net" IRC network with the nick "cIRCler" and joins channel #botwar. It will send the message "Hi!" all members of #botwar, before quitting with the message "Bye!".
 ```java
 import com.github.escortkeel.circle.IRCClient;
 import com.github.escortkeel.circle.IRCAdapter;
 import com.github.escortkeel.circle.event.IRCChannelJoinEvent;
-import com.github.escortkeel.circle.exception.IRCNameException;
 import java.io.IOException;
 
 public class Main {
-
-    public static void main(String[] args) throws IRCNameException, IOException, InterruptedException {
-        IRCClient c = IRCClient.create("irc.freenode.net", "cIRCleMan", new IRCAdapter() {
+    public static void main(String[] args) throws IOException, InterruptedException {
+        IRCClient c = new IRCClient("cIRCler", new IRCAdapter() {
             @Override
             public void onChannelJoin(IRCChannelJoinEvent e) {
                 e.getClient().privmsg(e.getChannel(), "Hi!");
                 e.getClient().quit("Bye!");
             }
         });
+        c.connect("irc.freenode.net");
         c.join("#botwar");
         c.waitFor();
     }

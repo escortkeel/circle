@@ -25,29 +25,38 @@
  */
 package com.github.escortkeel.circle;
 
+import com.github.escortkeel.circle.event.IRCConnectionEstablishedEvent;
+import com.github.escortkeel.circle.event.IRCWelcomeEvent;
+import com.github.escortkeel.circle.event.IRCConnectionClosedEvent;
+import com.github.escortkeel.circle.event.IRCErrorEvent;
 import com.github.escortkeel.circle.event.IRCChannelJoinEvent;
 import com.github.escortkeel.circle.event.IRCChannelPartEvent;
-import com.github.escortkeel.circle.event.IRCConnectEvent;
 import com.github.escortkeel.circle.event.IRCEvent;
 import com.github.escortkeel.circle.event.IRCMotdEvent;
+import com.github.escortkeel.circle.event.IRCNicknameChangeEvent;
+import com.github.escortkeel.circle.event.IRCNicknameInUseEvent;
 import com.github.escortkeel.circle.event.IRCPrivateMessageEvent;
 import com.github.escortkeel.circle.event.IRCRawMessageEvent;
-import com.github.escortkeel.circle.exception.IRCNameException;
-import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.Socket;
-import java.nio.charset.Charset;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousChannelGroup;
+import java.nio.channels.AsynchronousSocketChannel;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.CompletionHandler;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.Semaphore;
+import java.util.Queue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * This class implements an IRC client connection to an IRC server.
@@ -56,49 +65,29 @@ import java.util.concurrent.Semaphore;
  */
 public class IRCClient implements Closeable {
 
-    /**
-     * Creates a new
-     * <code>IRCClient</code> and synchronously connects it to port 6667 (the
-     * default IRC port) on the named host, using the specified nickname and
-     * <code>IRCAdapter</code>. A call to this method <b>will</b> block until
-     * either a connection is established or an error occurred.
-     * <p>
-     * If the specified host is <tt>null</tt> it is the equivalent of specifying
-     * the address as
-     * <tt>{@link java.net.InetAddress#getByName InetAddress.getByName}(null)</tt>.
-     * In other words, it is equivalent to specifying an address of the loopback
-     * interface.
-     *
-     * @param address the host name, or <code>null</code> for the loopback
-     * address.
-     * @param nickname the nickname.
-     * @param adapter the adapter to be associated with * * * * * * *
-     * this <code>IRCClient</code>.
-     *
-     * @exception IRCNameException if the specified nickname is already in use.
-     * @exception IOException if an I/O error occurs when creating the
-     * connection.
-     */
-    public static IRCClient create(String address, String nickname, IRCAdapter adapter) throws IRCNameException, IOException {
-        return create(address, 6667, nickname, adapter);
-    }
+    private final AsynchronousChannelGroup group;
+    private final AsynchronousSocketChannel socket;
+    private final String nickname;
+    private final String password;
+    private final String username;
+    private final String realname;
+    private final boolean invisible;
+    private final IRCAdapter adapter;
+    private final ByteBuffer buff = ByteBuffer.allocateDirect(512);
+    private final Queue<ByteBuffer> outQueue = new LinkedBlockingQueue<>();
+    private final ArrayList<String> channels = new ArrayList<>();
+    private final StringBuilder motd = new StringBuilder();
+    private volatile boolean connected = false;
+    private volatile boolean asynchWriting = false;
+    private String part = "";
 
     /**
-     * Creates a new
-     * <code>IRCClient</code> and synchronously connects it to the specified
-     * port number on the named host, using the specified nickname and
-     * <code>IRCAdapter</code>. A call to this method <b>will</b> block until
-     * either a connection is established or an error occurred.
-     * <p>
-     * If the specified host is <tt>null</tt> it is the equivalent of specifying
-     * the address as
-     * <tt>{@link java.net.InetAddress#getByName InetAddress.getByName}(null)</tt>.
-     * In other words, it is equivalent to specifying an address of the loopback
-     * interface.
+     * Constructs a new
+     * <code>IRCClient</code> with the specified nickname and
+     * <code>IRCAdapter</code>. A call to
+     * <code>connect()</code> must be made in order to resolve and connect this
+     * <code>IRCClient</code>.
      *
-     * @param address the host name, or <code>null</code> for the loopback
-     * address.
-     * @param port the port number.
      * @param nickname the nickname.
      * @param adapter the adapter to be associated with this
      * <code>IRCClient</code>.
@@ -107,27 +96,18 @@ public class IRCClient implements Closeable {
      * @exception IOException if an I/O error occurs when creating the
      * connection.
      */
-    public static IRCClient create(String address, int port, String nickname, IRCAdapter adapter) throws IRCNameException, IOException {
-        return create(address, port, nickname, nickname, nickname, false, adapter);
+    public IRCClient(String nickname, IRCAdapter adapter) throws IOException {
+        this(nickname, nickname, nickname, false, adapter);
     }
 
     /**
-     * Creates a new
-     * <code>IRCClient</code> and synchronously connects it to the specified
-     * port number on the named host, using the specified nickname, username,
-     * real name, invisibility flag and
-     * <code>IRCAdapter</code>. A call to this method <b>will</b> block until
-     * either a connection is established or an error occurred.
-     * <p>
-     * If the specified host is <tt>null</tt> it is the equivalent of specifying
-     * the address as
-     * <tt>{@link java.net.InetAddress#getByName InetAddress.getByName}(null)</tt>.
-     * In other words, it is equivalent to specifying an address of the loopback
-     * interface.
+     * Constructs a new
+     * <code>IRCClient</code> with the specified nickname, username, real name,
+     * invisibility flag and
+     * <code>IRCAdapter</code>. A call to
+     * <code>connect()</code> must be made in order to resolve and connect this
+     * <code>IRCClient</code>.
      *
-     * @param address the host name, or <code>null</code> for the loopback
-     * address.
-     * @param port the port number.
      * @param nickname the nickname.
      * @param username the username.
      * @param realname the real name.
@@ -135,32 +115,10 @@ public class IRCClient implements Closeable {
      * @param adapter the adapter to be associated with this
      * <code>IRCClient</code>.
      *
-     * @exception IRCNameException if the specified nickname is already in use.
      * @exception IOException if an I/O error occurs when creating the
      * connection.
      */
-    public static IRCClient create(String address, int port, String nickname, String username, String realname, boolean invisible, IRCAdapter adapter) throws IRCNameException, IOException {
-        IRCClient c = new IRCClient(address, port, nickname, username, realname, invisible, adapter);
-        c.worker.start();
-        c.fireEvent(new IRCConnectEvent(c));
-        return c;
-    }
-    private final Socket socket;
-    private final BufferedReader in;
-    private final PrintWriter out;
-    private final String nickname;
-    private final String password;
-    private final String username;
-    private final String realname;
-    private final boolean invisible;
-    private final IRCAdapter adapter;
-    private final StringBuilder motd = new StringBuilder();
-    private final ArrayList<String> channels = new ArrayList<>();
-    private final Thread worker;
-    private final Semaphore running = new Semaphore(1);
-    private Status status = Status.WAITING;
-
-    private IRCClient(String address, int port, String nickname, String username, String realname, boolean invisible, IRCAdapter adapter) throws IRCNameException, IOException {
+    public IRCClient(String nickname, String username, String realname, boolean invisible, IRCAdapter adapter) throws IOException {
         Objects.requireNonNull(nickname);
         Objects.requireNonNull(username);
         Objects.requireNonNull(realname);
@@ -174,9 +132,12 @@ public class IRCClient implements Closeable {
             throw new IllegalArgumentException("Username must not contain spaces");
         }
 
-        this.socket = new Socket(address, port);
-        this.in = new BufferedReader(new InputStreamReader(socket.getInputStream(), Charset.forName("UTF-8")));
-        this.out = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), Charset.forName("UTF-8")));
+        if (nickname.length() > 16) {
+            throw new IllegalArgumentException("Nickname must be no more than 16 characters");
+        }
+
+        this.group = AsynchronousChannelGroup.withThreadPool(Executors.newFixedThreadPool(1));
+        this.socket = AsynchronousSocketChannel.open(group);
 
         this.nickname = nickname;
         this.password = Long.toString(new SecureRandom().nextLong(), 36);
@@ -185,32 +146,84 @@ public class IRCClient implements Closeable {
         this.invisible = invisible;
 
         this.adapter = adapter;
+    }
 
-        this.running.acquireUninterruptibly();
+    /**
+     * Connects this
+     * <code>IRCClient</code> to port 6667 (the default IRC port) of the
+     * specified host.
+     *
+     * If the specified host is <tt>null</tt> it is the equivalent of specifying
+     * the address as
+     * <tt>{@link java.net.InetAddress#getByName InetAddress.getByName}(null)</tt>.
+     * In other words, it is equivalent to specifying an address of the loopback
+     * interface.
+     *
+     * @param address the host name, or <code>null</code> for the loopback
+     * address.
+     * @throws IOException
+     */
+    public void connect(String address) throws IOException {
+        connect(address, 6667);
+    }
 
-        send("PASS " + password);
-        send("USER " + username + " " + (invisible ? "8" : "0") + " * :" + realname);
-        send("NICK " + nickname);
+    /**
+     * Connects this
+     * <code>IRCClient</code> to the specified port of the specified host.
+     *
+     * If the specified host is <tt>null</tt> it is the equivalent of specifying
+     * the address as
+     * <tt>{@link java.net.InetAddress#getByName InetAddress.getByName}(null)</tt>.
+     * In other words, it is equivalent to specifying an address of the loopback
+     * interface.
+     *
+     * @param address the host name, or <code>null</code> for the loopback
+     * address.
+     * @param port the port number.
+     * @throws IOException if an I/O error occurs
+     * @throws ConnectionPendingException if a connection attempt is in progress
+     *
+     */
+    public void connect(String address, int port) throws IOException {
+        queueWrite("PASS " + password);
+        queueWrite("USER " + username + " " + (invisible ? "8" : "0") + " * :" + realname);
+        queueWrite("NICK " + nickname);
 
-        while (parseLine()) {
-            if (status == Status.SUCCESS) {
-                break;
-            } else if (status == Status.FAIL) {
-                throw new IRCNameException("Nickname taken");
-            } else if (status == Status.ERROR) {
-                throw new IOException("IRC error");
-            }
-        }
-
-        worker = new Thread("cIRCle Thread") {
+        final IRCClient me = this;
+        socket.connect(new InetSocketAddress(address, port), this, new CompletionHandler<Void, IRCClient>() {
             @Override
-            @SuppressWarnings("empty-statement")
-            public void run() {
-                while (parseLine());
-            }
-        };
+            public void completed(Void result, IRCClient attachment) {
+                connected = true;
 
-        worker.setDaemon(true);
+                fire(new IRCConnectionEstablishedEvent(me));
+
+                writeLoop();
+                readLoop();
+            }
+
+            @Override
+            public void failed(Throwable exc, IRCClient attachment) {
+                fire(new IRCConnectionClosedEvent(me));
+            }
+        });
+    }
+
+    /**
+     * Attempts to join the specified channel.
+     *
+     * @param channel the channel to join.
+     */
+    public void join(String channel) {
+        queueWrite("JOIN " + channel);
+    }
+
+    /**
+     * Attempts to leave the specified channel.
+     *
+     * @param channel the channel to leave.
+     */
+    public void part(String channel) {
+        queueWrite("PART " + channel);
     }
 
     /**
@@ -224,26 +237,24 @@ public class IRCClient implements Closeable {
             throw new IllegalArgumentException("Target must not contain spaces");
         }
 
-        send("PRIVMSG " + target + " :" + message);
+        queueWrite("PRIVMSG " + target + " :" + message);
     }
 
     /**
-     * Attempts to join the specified channel.
+     * Attempts to change the nickname of this
+     * <code>IRCClient</code>.
      *
-     * @param channel the channel to join.
+     * @param nickname.
+     *
+     * @throws IllegalArgumentException is the nickname is longer than 16
+     * characters
      */
-    public void join(String channel) {
-        send("JOIN " + channel);
-    }
+    public void nick(String nickname) {
+        if (nickname.length() > 16) {
+            throw new IllegalArgumentException("Nickname must be no more than 16 characters");
+        }
 
-    /**
-     * Attempts to leave the specified channel. If the client is not a member of
-     * the specified channel, invoking this method has no effect.
-     *
-     * @param channel the channel to leave.
-     */
-    public void part(String channel) {
-        send("PART " + channel);
+        queueWrite("NICK " + nickname);
     }
 
     /**
@@ -252,8 +263,7 @@ public class IRCClient implements Closeable {
      * then invoking this method has no effect.
      */
     public void quit() {
-        send("QUIT");
-        status = Status.QUIT;
+        queueWrite("QUIT");
     }
 
     /**
@@ -264,8 +274,7 @@ public class IRCClient implements Closeable {
      * @param reason the reason for closing the connection
      */
     public void quit(String reason) {
-        send("QUIT :" + reason);
-        status = Status.QUIT;
+        queueWrite("QUIT :" + reason);
     }
 
     /**
@@ -273,19 +282,31 @@ public class IRCClient implements Closeable {
      * <code>IRCClient</code> instance is connected to.
      *
      * @return the address of the remote host.
+     * @throws ClosedChannelException if the underlying channel has already been
+     * closed
      */
-    public String getRemoteAddress() {
-        return socket.getInetAddress().getHostName();
+    public String getRemoteAddress() throws IOException, ClosedChannelException {
+        if (!connected) {
+            throw new IllegalStateException("Client not yet connected");
+        }
+
+        return ((InetSocketAddress) socket.getRemoteAddress()).getHostName();
     }
 
     /**
-     * Returns the port on the remote host which this
-     * <code>IRCClient</code> instance is connected to.
+     * Returns the port on the port number which this
+     * <code>IRCClient</code> instance is connected via.
      *
-     * @return the port on the remote host.
+     * @return the port on the remote host, or -1.
+     * @throws ClosedChannelException if the underlying channel has already been
+     * closed
      */
-    public int getRemotePort() {
-        return socket.getPort();
+    public int getRemotePort() throws IOException, ClosedChannelException {
+        if (!connected) {
+            throw new IllegalStateException("Client not yet connected");
+        }
+
+        return ((InetSocketAddress) socket.getRemoteAddress()).getPort();
     }
 
     /**
@@ -351,7 +372,7 @@ public class IRCClient implements Closeable {
      * @see #close
      */
     public boolean isClosed() {
-        return socket.isClosed();
+        return !socket.isOpen();
     }
 
     /**
@@ -361,40 +382,34 @@ public class IRCClient implements Closeable {
      * @throws InterruptedException if the waiting thread is interrupted.
      */
     public void waitFor() throws InterruptedException {
-        running.acquire();
+        group.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
+    }
+
+    /**
+     * Waits until this
+     * <code>IRCClient</code> is closed, or until the specified number of
+     * milliseconds elapse.
+     *
+     * @param millis the maximum number of milliseconds to wait for
+     *
+     * @throws InterruptedException if the waiting thread is interrupted.
+     */
+    public void waitFor(int millis) throws InterruptedException {
+        group.awaitTermination(millis, TimeUnit.MILLISECONDS);
     }
 
     /**
      * Closes the socket underlying this
      * <code>IRCClient</code> abruptly. If the connection is already closed then
      * invoking this method has no effect.
+     *
+     * @throws IOException if an I/O error occurs
      */
     @Override
-    public void close() {
-        try {
-            socket.close();
-        } catch (IOException ex) {
-        }
+    public void close() throws IOException {
+        group.shutdownNow();
 
-        running.release();
-    }
-
-    private boolean parseLine() {
-        if (isClosed()) {
-            return false;
-        }
-
-        try {
-            String s = in.readLine();
-            if (s != null) {
-                handleMessage(s);
-                return true;
-            }
-        } catch (IOException ex) {
-            close();
-        }
-
-        return false;
+        fire(new IRCConnectionClosedEvent(this));
     }
 
     private void handleMessage(String raw) {
@@ -405,6 +420,8 @@ public class IRCClient implements Closeable {
             raw = raw.substring(split + 1);
             split = raw.indexOf(' ');
         }
+
+        fire(new IRCRawMessageEvent(this, source, raw));
 
         String keyword = raw.substring(0, split);
         String args = raw.substring(split + 1);
@@ -420,38 +437,40 @@ public class IRCClient implements Closeable {
         if (reply == -1) {
             switch (keyword) {
                 case "PING": {
-                    send("PONG " + args);
+                    queueWrite("PONG " + args);
                     break;
                 }
                 case "JOIN": {
                     channels.add(args);
-                    fireEvent(new IRCChannelJoinEvent(this, args));
+                    fire(new IRCChannelJoinEvent(this, args));
                     break;
                 }
                 case "PART": {
                     channels.remove(args);
-                    fireEvent(new IRCChannelPartEvent(this, args, false));
+                    fire(new IRCChannelPartEvent(this, args, false));
                     break;
                 }
                 case "KICK": {
                     int space = args.indexOf(' ');
                     if (args.substring(space + 1).equals(getNickname())) {
                         channels.remove(args);
-                        fireEvent(new IRCChannelPartEvent(this, args.substring(0, space), true));
+                        fire(new IRCChannelPartEvent(this, args.substring(0, space), true));
                     }
                     break;
                 }
                 case "PRIVMSG": {
-                    int space = args.indexOf(' ');
-                    fireEvent(new IRCPrivateMessageEvent(this, source, args.substring(space + 1), args.substring(0, space)));
+                    fire(new IRCPrivateMessageEvent(this, source, args));
+                    break;
+                }
+                case "QUIT": {
+                    try {
+                        close();
+                    } catch (IOException ex) {
+                    }
                     break;
                 }
                 case "ERROR": {
-                    if (status == Status.QUIT) {
-                        close();
-                    } else if (status == Status.WAITING) {
-                        status = Status.ERROR;
-                    }
+                    fire(new IRCErrorEvent(this, source, args));
                     break;
                 }
                 default: {
@@ -461,13 +480,12 @@ public class IRCClient implements Closeable {
         } else {
             switch (IRCReply.toEnum(reply)) {
                 case WELCOME: {
-                    status = Status.SUCCESS;
+                    fire(new IRCWelcomeEvent(this));
+                    fire(new IRCNicknameChangeEvent(this, nickname));
                     break;
                 }
                 case NICKNAMEINUSE: {
-                    if (status != Status.SUCCESS) {
-                        status = Status.FAIL;
-                    }
+                    fire(new IRCNicknameInUseEvent(this, args.substring(args.indexOf(" ")).substring(args.indexOf(" ") + 1)));
                     break;
                 }
                 case MOTDSTART: {
@@ -501,7 +519,7 @@ public class IRCClient implements Closeable {
                     if (motdStart != -1 && args.substring(motdStart).length() != 1) {
                         motd.append(args.substring(motdStart + 1)).append("\n");
                     }
-                    fireEvent(new IRCMotdEvent(this, motd.toString()));
+                    fire(new IRCMotdEvent(this, motd.toString()));
                     break;
                 }
                 default: {
@@ -509,32 +527,87 @@ public class IRCClient implements Closeable {
                 }
             }
         }
-
-        fireEvent(new IRCRawMessageEvent(this, source, raw));
     }
 
-    private void fireEvent(IRCEvent e) {
+    private void fire(IRCEvent e) {
         for (Method m : IRCAdapter.class.getMethods()) {
             if (m.getParameterTypes().length == 1 && m.getParameterTypes()[0].equals(e.getClass())) {
                 try {
                     m.invoke(adapter, e);
                 } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
+                    Logger.getLogger(IRCClient.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
         }
     }
 
-    private void send(String string) {
-        out.print(string + "\r\n");
-        out.flush();
+    private void readLoop() {
+        socket.read(buff, this, new CompletionHandler<Integer, IRCClient>() {
+            @Override
+            public void completed(Integer result, IRCClient attachment) {
+                byte[] bytes = new byte[buff.position()];
+
+                buff.flip();
+                buff.get(bytes);
+                buff.rewind();
+
+                String raw = part + new String(bytes);
+                String[] split = raw.split("\r\n");
+                for (int i = 0; i < split.length - 1; i++) {
+                    handleMessage(split[i]);
+                }
+                part = "";
+
+                if (raw.endsWith("\r\n")) {
+                    handleMessage(split[split.length - 1]);
+                } else {
+                    part += split[split.length - 1];
+                }
+
+                readLoop();
+            }
+
+            @Override
+            public void failed(Throwable exc, IRCClient attachment) {
+                try {
+                    close();
+                } catch (IOException ex) {
+                }
+            }
+        });
     }
 
-    private static enum Status {
+    private void queueWrite(String raw) {
+        synchronized (outQueue) {
+            outQueue.add(ByteBuffer.wrap((raw + "\r\n").getBytes()));
+            if (!asynchWriting && connected) {
+                writeLoop();
+            }
+        }
+    }
 
-        WAITING,
-        SUCCESS,
-        FAIL,
-        ERROR,
-        QUIT
+    private void writeLoop() {
+        synchronized (outQueue) {
+            asynchWriting = true;
+            socket.write(outQueue.poll(), this, new CompletionHandler<Integer, IRCClient>() {
+                @Override
+                public void completed(Integer result, IRCClient attachment) {
+                    synchronized (outQueue) {
+                        asynchWriting = false;
+                        if (!outQueue.isEmpty()) {
+                            writeLoop();
+                        }
+                    }
+                }
+
+                @Override
+                public void failed(Throwable exc, IRCClient attachment) {
+                    try {
+                        close();
+                    } catch (IOException ex) {
+                    }
+                }
+            });
+        }
     }
 }
