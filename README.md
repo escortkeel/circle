@@ -3,7 +3,7 @@ circle is a fully asynchronous IRC client library for Java. It aims to be lightw
 
 The project was started on March 27 2013.
 
-The source code is hosted on <a href="https://github.com/escortkeel/cIRCle">GitHub</a> and is released under the terms of the <a href="https://raw.github.com/escortkeel/cIRCle/master/LICENSE">Simplified BSD License</a>.
+The source code is hosted on [GitHub](https://github.com/escortkeel/circle) and is released under the terms of the [Simplified BSD License](https://raw.github.com/escortkeel/circle/master/LICENSE).
 
 ## Documentation
 Coming soon.
