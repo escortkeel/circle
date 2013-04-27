@@ -1,5 +1,5 @@
-# cIRCle
-cIRCle (pronnounced "circle") is a fully asynchronous IRC client library created and developed by Keeley Hoek. It fundamentally aims to be lightweight and easy to use.
+# circle
+circle is a fully asynchronous IRC client library for Java. It aims to be lightweight and easy to use.
 
 The project was started on March 27 2013.
 
