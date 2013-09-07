@@ -49,6 +49,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.CompletionHandler;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.Queue;
@@ -65,6 +66,7 @@ import java.util.logging.Logger;
  */
 public class IRCClient implements Closeable {
 
+    private static final SecureRandom random = new SecureRandom();
     private final AsynchronousChannelGroup group;
     private final AsynchronousSocketChannel socket;
     private final String nickname;
@@ -77,9 +79,11 @@ public class IRCClient implements Closeable {
     private final Queue<ByteBuffer> outQueue = new LinkedBlockingQueue<>();
     private final ArrayList<String> channels = new ArrayList<>();
     private final StringBuilder motd = new StringBuilder();
+    private String part = "";
+    private volatile boolean welcomed = false;
     private volatile boolean connected = false;
     private volatile boolean asynchWriting = false;
-    private String part = "";
+    private final ArrayList<String> welcomeWaiters = new ArrayList<>();
 
     /**
      * Constructs a new
@@ -139,7 +143,7 @@ public class IRCClient implements Closeable {
         this.socket = AsynchronousSocketChannel.open(group);
 
         this.nickname = nickname;
-        this.password = Long.toString(new SecureRandom().nextLong(), 36);
+        this.password = Long.toString(random.nextLong(), 36);
         this.username = username;
         this.realname = realname;
         this.invisible = invisible;
@@ -192,12 +196,14 @@ public class IRCClient implements Closeable {
         socket.connect(new InetSocketAddress(address, port), this, new CompletionHandler<Void, IRCClient>() {
             @Override
             public void completed(Void result, IRCClient attachment) {
-                connected = true;
+                synchronized (outQueue) {
+                    connected = true;
 
-                fire(new IRCConnectionEstablishedEvent(me));
+                    fire(new IRCConnectionEstablishedEvent(me));
+                }
 
-                writeLoop();
                 readLoop();
+                writeLoop();
             }
 
             @Override
@@ -213,7 +219,7 @@ public class IRCClient implements Closeable {
      * @param channel the channel to join.
      */
     public void join(String channel) {
-        queueWrite("JOIN " + channel);
+        sendMessage("JOIN " + channel);
     }
 
     /**
@@ -222,7 +228,7 @@ public class IRCClient implements Closeable {
      * @param channel the channel to leave.
      */
     public void part(String channel) {
-        queueWrite("PART " + channel);
+        sendMessage("PART " + channel);
     }
 
     /**
@@ -236,7 +242,7 @@ public class IRCClient implements Closeable {
             throw new IllegalArgumentException("Target must not contain spaces");
         }
 
-        queueWrite("PRIVMSG " + target + " :" + message);
+        sendMessage("PRIVMSG " + target + " :" + message);
     }
 
     /**
@@ -253,7 +259,7 @@ public class IRCClient implements Closeable {
             throw new IllegalArgumentException("Nickname must be no more than 16 characters");
         }
 
-        queueWrite("NICK " + nickname);
+        sendMessage("NICK " + nickname);
     }
 
     /**
@@ -262,7 +268,7 @@ public class IRCClient implements Closeable {
      * then invoking this method has no effect.
      */
     public void quit() {
-        queueWrite("QUIT");
+        sendMessage("QUIT");
     }
 
     /**
@@ -273,7 +279,7 @@ public class IRCClient implements Closeable {
      * @param reason the reason for closing the connection
      */
     public void quit(String reason) {
-        queueWrite("QUIT :" + reason);
+        sendMessage("QUIT :" + reason);
     }
 
     /**
@@ -434,6 +440,18 @@ public class IRCClient implements Closeable {
         }
 
         if (reply == -1) {
+            if (source != null) {
+                split = source.indexOf('!');
+
+                if (split != -1) {
+                    String nick = source.substring(0, split);
+
+                    if (!nick.equals(nickname)) {
+                        return;
+                    }
+                }
+            }
+
             switch (keyword) {
                 case "PING": {
                     queueWrite("PONG " + args);
@@ -481,6 +499,8 @@ public class IRCClient implements Closeable {
                 case WELCOME: {
                     fire(new IRCWelcomeEvent(this));
                     fire(new IRCNicknameChangeEvent(this, nickname));
+
+                    wasWelcomed();
                     break;
                 }
                 case NICKNAMEINUSE: {
@@ -527,16 +547,26 @@ public class IRCClient implements Closeable {
             }
         }
     }
+    private static final HashMap<Class, Method> eventMethods = new HashMap<>();
+
+    static {
+        for (Method m : IRCAdapter.class.getMethods()) {
+            if (m.getParameterTypes().length == 1 && IRCEvent.class.isAssignableFrom(m.getParameterTypes()[0])) {
+                eventMethods.put(m.getParameterTypes()[0], m);
+            }
+        }
+    }
 
     private void fire(IRCEvent e) {
-        for (Method m : IRCAdapter.class.getMethods()) {
-            if (m.getParameterTypes().length == 1 && m.getParameterTypes()[0].equals(e.getClass())) {
-                try {
-                    m.invoke(adapter, e);
-                } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
-                    Logger.getLogger(IRCClient.class.getName()).log(Level.SEVERE, null, ex);
-                }
+        try {
+            Method m = eventMethods.get(e.getClass());
+            if (m == null) {
+                throw new IllegalArgumentException("No handler in IRCAdapter class for: " + e.getClass().getName());
             }
+
+            m.invoke(adapter, e);
+        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
+            Logger.getLogger(IRCClient.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
@@ -576,6 +606,26 @@ public class IRCClient implements Closeable {
         });
     }
 
+    private void sendMessage(String message) {
+        synchronized (outQueue) {
+            if (welcomed) {
+                queueWrite(message);
+            } else {
+                welcomeWaiters.add(message);
+            }
+        }
+    }
+
+    private void wasWelcomed() {
+        synchronized (outQueue) {
+            welcomed = true;
+
+            for (String message : welcomeWaiters) {
+                queueWrite(message);
+            }
+        }
+    }
+
     private void queueWrite(String raw) {
         synchronized (outQueue) {
             outQueue.add(ByteBuffer.wrap((raw + "\r\n").getBytes()));
@@ -607,6 +657,7 @@ public class IRCClient implements Closeable {
                     }
                 }
             });
+
         }
     }
 }
