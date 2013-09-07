@@ -47,7 +47,7 @@ public class IRCPrivateMessageEvent extends IRCMessageEvent {
 
         int split = message.indexOf(" ");
         this.target = message.substring(0, split);
-        this.message = message.substring(split + 1);
+        this.message = message.substring(split + 2);
     }
 
     /**

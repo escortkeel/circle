@@ -440,15 +440,12 @@ public class IRCClient implements Closeable {
         }
 
         if (reply == -1) {
+            String nick = null;
             if (source != null) {
                 split = source.indexOf('!');
 
                 if (split != -1) {
-                    String nick = source.substring(0, split);
-
-                    if (!nick.equals(nickname)) {
-                        return;
-                    }
+                    nick = source.substring(0, split);
                 }
             }
 
@@ -480,14 +477,18 @@ public class IRCClient implements Closeable {
                     break;
                 }
                 case "QUIT": {
-                    try {
-                        close();
-                    } catch (IOException ex) {
+                    if (nickname.equals(nick)) {
+                        try {
+                            close();
+                        } catch (IOException ex) {
+                        }
                     }
                     break;
                 }
                 case "ERROR": {
-                    fire(new IRCErrorEvent(this, source, args));
+                    if (nickname.equals(nick)) {
+                        fire(new IRCErrorEvent(this, source, args));
+                    }
                     break;
                 }
                 default: {
