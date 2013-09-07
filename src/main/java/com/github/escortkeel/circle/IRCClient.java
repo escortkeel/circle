@@ -418,15 +418,15 @@ public class IRCClient implements Closeable {
     }
 
     private void handleMessage(String raw) {
-        String source = null;
+        IRCUser user = null;
         int split = raw.indexOf(' ');
         if (raw.startsWith(":")) {
-            source = raw.substring(1, split);
+            user = new IRCUser(raw.substring(1, split));
             raw = raw.substring(split + 1);
             split = raw.indexOf(' ');
         }
 
-        fire(new IRCRawMessageEvent(this, source, raw));
+        fire(new IRCRawMessageEvent(this, user, raw));
 
         String keyword = raw.substring(0, split);
         String args = raw.substring(split + 1);
@@ -440,15 +440,6 @@ public class IRCClient implements Closeable {
         }
 
         if (reply == -1) {
-            String nick = null;
-            if (source != null) {
-                split = source.indexOf('!');
-
-                if (split != -1) {
-                    nick = source.substring(0, split);
-                }
-            }
-
             switch (keyword) {
                 case "PING": {
                     queueWrite("PONG " + args);
@@ -473,11 +464,11 @@ public class IRCClient implements Closeable {
                     break;
                 }
                 case "PRIVMSG": {
-                    fire(new IRCPrivateMessageEvent(this, source, args));
+                    fire(new IRCPrivateMessageEvent(this, user, args));
                     break;
                 }
                 case "QUIT": {
-                    if (nickname.equals(nick)) {
+                    if (user == null || user.getNickname().equals(nickname)) {
                         try {
                             close();
                         } catch (IOException ex) {
@@ -486,8 +477,8 @@ public class IRCClient implements Closeable {
                     break;
                 }
                 case "ERROR": {
-                    if (nickname.equals(nick)) {
-                        fire(new IRCErrorEvent(this, source, args));
+                    if (user == null || user.getNickname().equals(nickname)) {
+                        fire(new IRCErrorEvent(this, user, args));
                     }
                     break;
                 }
