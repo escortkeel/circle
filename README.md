@@ -1,4 +1,4 @@
-# circle
+# circle [![Build Status](https://travis-ci.org/escortkeel/circle.png?branch=master)](https://travis-ci.org/escortkeel/circle)
 circle is a fully asynchronous IRC client library for Java. It aims to be lightweight and easy to use.
 
 The project was started on March 27 2013.
