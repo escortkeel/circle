@@ -1,9 +1,9 @@
-# circle [![Build Status](https://travis-ci.org/escortkeel/circle.png?branch=master)](https://travis-ci.org/escortkeel/circle)
+# circle [![Build Status](https://travis-ci.org/khoek/circle.png?branch=master)](https://travis-ci.org/khoek/circle)
 circle is a fully asynchronous IRC client library for Java. It aims to be lightweight and easy to use.
 
 The project was started on March 27 2013.
 
-The source code is hosted on [GitHub](https://github.com/escortkeel/circle) and is released under the terms of the [Simplified BSD License](https://raw.github.com/escortkeel/circle/master/LICENSE).
+The source code is hosted on [GitHub](https://github.com/khoek/circle) and is released under the terms of the [Simplified BSD License](https://raw.github.com/khoek/circle/master/LICENSE).
 
 ## Documentation
 Coming soon.
